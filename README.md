@@ -138,6 +138,84 @@ Suggested PR checklist:
 This repository does not include a license file. Add a license suitable for your project (e.g., MIT, Apache-2.0) if you intend to publish or open-source the project.
 
 Maintainer: Hilkiah Emmanuel — Repository: https://github.com/hilkiah-emmanuel/secure-blockchain-school-voting-system
+
+## Architecture diagram (high level)
+
+Frontend (Vite + React)  <--->  Backend (Express)  <--->  Local blockchain (Ganache)
+
+- Frontend: user interactions, authentication flow, admin UI, and WebSocket updates.
+- Backend: REST API, JWT auth, SQLite persistence, vote recording, and blockchain anchoring.
+- Blockchain: optional local test chain for immutability and auditability of recorded votes.
+
+Below is a simple sequence for a vote submission:
+
+1. Student authenticates / teacher issues session
+2. Student submits vote via frontend -> `POST /api/votes/submit`
+3. Backend records vote to local DB and calls `recordVoteOnBlockchain`
+4. Backend returns transaction details and broadcasts update via WebSocket
+
+## API reference (concise)
+
+Base URL: `/api` (server mounts routes under `/api` in `server/index.js`)
+
+Auth
+- `POST /api/auth/login` — body: `{ email, password, twoFactorCode? }` -> returns JWT and user info
+- `POST /api/auth/register` — body: `{ email, password, name }` -> register teacher (admin-only in production)
+- `GET /api/auth/me` — headers: `Authorization: Bearer <token>` -> returns current user
+- `POST /api/auth/setup-2fa` — headers: `Authorization` -> initiates 2FA setup (returns secret and QR)
+- `POST /api/auth/enable-2fa` — headers: `Authorization`, body: `{ code }` -> enable 2FA
+
+Classes
+- `GET /api/classes/` — headers: `Authorization` -> list classes for teacher
+- `GET /api/classes/:id` — headers: `Authorization` -> get single class with students
+- `POST /api/classes/` — headers: `Authorization`, body: `{ name, grade }` -> create class
+- `PUT /api/classes/:id` — headers: `Authorization`, body: `{ name, grade }` -> update
+- `DELETE /api/classes/:id` — headers: `Authorization` -> delete
+- `POST /api/classes/:id/toggle-voting` — headers: `Authorization` -> open/close voting for class
+
+Students
+- `GET /api/students/class/:classId` — headers: `Authorization` -> students in class
+- `POST /api/students/` — headers: `Authorization`, body: `{ classId, name, pin? }` -> add student
+- `POST /api/students/bulk` — headers: `Authorization`, body: `{ classId, students: [...] }` -> bulk add
+- `PUT /api/students/:id` — headers: `Authorization`, body: `{ name, pin? }` -> update student
+- `DELETE /api/students/:id` — headers: `Authorization` -> delete
+- `POST /api/students/:id/verify-pin` — body: `{ pin }` -> verify PIN for voting
+- `POST /api/students/class/:classId/reset-votes` — headers: `Authorization` -> reset votes for a class
+
+Elections / Positions / Candidates
+- `GET /api/elections/` — headers: `Authorization` -> list elections (with positions & candidates)
+- `GET /api/elections/:id` — headers: `Authorization` -> election details
+- `POST /api/elections/` — headers: `Authorization`, body: `{ name, description, startDate, endDate }` -> create election
+- `PUT /api/elections/:id` — headers: `Authorization` -> update election
+- `DELETE /api/elections/:id` — headers: `Authorization` -> delete election
+- `POST /api/elections/:id/positions` — headers: `Authorization`, body: `{ title, type }` -> add position
+- `PUT /api/elections/positions/:positionId` — headers: `Authorization` -> update position
+- `DELETE /api/elections/positions/:positionId` — headers: `Authorization` -> delete position
+- `POST /api/elections/positions/:positionId/candidates` — headers: `Authorization`, body: `{ name, photoUrl?, manifesto? }` -> add candidate
+- `PUT /api/elections/candidates/:candidateId` — headers: `Authorization` -> update candidate
+- `DELETE /api/elections/candidates/:candidateId` — headers: `Authorization` -> delete candidate
+
+Votes
+- `POST /api/votes/submit` — headers: `Authorization`, body: `{ classId, studentId, positionId, candidateId, rankedOrder? }` -> records vote, anchors to blockchain, returns `{ success, voteId, transactionHash, blockNumber }`
+- `GET /api/votes/queue` — headers: `Authorization` -> check queued votes (pending blockchain retries)
+- `POST /api/votes/retry-queue` — headers: `Authorization` -> attempt to record queued votes on blockchain
+
+Results & exports
+- `GET /api/results/class/:classId` — headers: `Authorization` -> aggregated results for a class
+- `GET /api/results/class/:classId/export/csv` — headers: `Authorization` -> CSV download
+- `GET /api/results/class/:classId/export/json` — headers: `Authorization` -> JSON download
+
+Teachers (admin)
+- `GET /api/teachers/` — headers: `Authorization` (admin) -> list teachers
+- `GET /api/teachers/:id` — headers: `Authorization` -> get teacher
+- `POST /api/teachers/` — headers: `Authorization` (admin) -> create teacher
+- `PUT /api/teachers/:id` — headers: `Authorization` -> update
+- `DELETE /api/teachers/:id` — headers: `Authorization` (admin) -> delete
+
+Notes
+- All protected routes require `Authorization: Bearer <token>`; tokens expire in 24h by default.
+- API responses generally return JSON with helpful `message` or error fields. See `server/routes` for exact behavior.
+
 # Secure Student Vote - Blockchain-Secured School Voting System
 
 A comprehensive, local school voting system with blockchain security, real-time synchronization, and Apple-inspired UI/UX.
