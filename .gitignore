@@ -1,3 +1,49 @@
+### Node ###
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+### Build output ###
+dist/
+build/
+.turbo/
+.next/
+.cache/
+.parcel-cache/
+
+### Vite ###
+.vite/
+
+### Environment ###
+.env
+.env.*.local
+.env.local
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+logs/
+*.log
+
+### IDEs ###
+.vscode/
+.idea/
+*.sublime-workspace
+
+### TypeScript ###
+*.tsbuildinfo
+
+### Misc ###
+coverage/
+coverage-final.json
+*.tgz
+
+### Bun ###
+/.bun
 # Dependencies
 node_modules/
 .pnp
